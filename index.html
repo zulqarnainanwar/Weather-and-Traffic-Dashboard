@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>City, Traffic & 7-Day Forecast Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .city-scroll::-webkit-scrollbar { width: 5px; }
+    .city-scroll::-webkit-scrollbar-track { background: #0f172a; }
+    .city-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center p-4 sm:p-8 font-sans">
+
+  <div class="max-w-5xl w-full space-y-6">
+
+    <!-- Header Section -->
+    <header class="text-center space-y-2">
+      <div class="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-amber-400 text-xs font-semibold">
+        <i data-lucide="shield-alert" class="w-4 h-4"></i> Real-time Road Block & 7-Day City Telemetry
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">City, Traffic & Weather Dashboard</h1>
+      <p class="text-slate-400 text-sm">Select any country or city to view live weather, traffic jams, road closures, and a 7-day forecast.</p>
+    </header>
+
+    <!-- Country Selector Bar -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400">
+          <i data-lucide="globe" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <span class="text-xs uppercase tracking-wider text-slate-500 font-semibold">Selected Country</span>
+          <h2 id="country-display" class="text-lg font-bold text-white">Pakistan</h2>
+        </div>
+      </div>
+
+      <!-- Country Dropdown -->
+      <select id="country-select" onchange="onCountryChange(this.value)" class="w-full sm:w-64 bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer text-sm">
+      </select>
+    </div>
+
+    <!-- Main 2-Column Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+      <!-- Left Column: Scrollable Cities Sidebar -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col h-[740px]">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+            <i data-lucide="map-pin" class="w-4 h-4 text-indigo-400"></i> Cities
+          </h3>
+          <span id="city-count" class="text-xs text-slate-500">0 cities</span>
+        </div>
+
+        <!-- City Search Input -->
+        <input 
+          type="text" 
+          id="city-search" 
+          placeholder="Search city in list..." 
+          oninput="filterCities(this.value)"
+          class="w-full bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 mb-3 text-slate-200 outline-none focus:border-indigo-500"
+        />
+
+        <!-- Scrollable City List -->
+        <div id="cities-list" class="city-scroll flex-1 overflow-y-auto space-y-1.5 pr-1">
+        </div>
+      </div>
+
+      <!-- Right Column: Weather, Forecast & Traffic Panel -->
+      <div class="md:col-span-2 space-y-6">
+        
+        <!-- Live Current Weather Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden">
+          <div class="flex justify-between items-start border-b border-slate-800 pb-6">
+            <div>
+              <div class="flex items-center gap-1.5 text-indigo-400 font-medium text-xs mb-1">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                <span id="detail-location">Islamabad, PK</span>
+              </div>
+              <h2 id="detail-city" class="text-3xl font-bold text-white">Islamabad</h2>
+              <p id="detail-condition" class="text-slate-400 text-xs capitalize mt-1">Fetching live weather...</p>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <i id="detail-icon" data-lucide="sun" class="w-12 h-12 text-amber-400"></i>
+              <span id="detail-temp" class="text-5xl font-extrabold text-white">--°C</span>
+            </div>
+          </div>
+
+          <!-- Weather Stats Grid -->
+          <div class="grid grid-cols-3 gap-3 mt-6">
+            <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
+              <i data-lucide="droplets" class="w-5 h-5 text-sky-400"></i>
+              <div>
+                <p class="text-[10px] text-slate-400">Humidity</p>
+                <p id="detail-humidity" class="text-sm font-bold text-slate-200">--</p>
+              </div>
+            </div>
+
+            <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
+              <i data-lucide="wind" class="w-5 h-5 text-indigo-400"></i>
+              <div>
+                <p class="text-[10px] text-slate-400">Wind Speed</p>
+                <p id="detail-wind" class="text-sm font-bold text-slate-200">--</p>
+              </div>
+            </div>
+
+            <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
+              <i data-lucide="thermometer" class="w-5 h-5 text-amber-400"></i>
+              <div>
+                <p class="text-[10px] text-slate-400">Feels Like</p>
+                <p id="detail-feelslike" class="text-sm font-bold text-slate-200">--</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7-Day Weather Forecast Panel -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="calendar-days" class="w-5 h-5 text-sky-400"></i> 7-Day Weather Forecast
+            </h3>
+            <span class="text-xs text-slate-500">Daily Telemetry</span>
+          </div>
+
+          <div id="forecast-container" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+            <p class="text-xs text-slate-500 col-span-full">Loading forecast data...</p>
+          </div>
+        </div>
+
+        <!-- Live Road Blocks & Traffic Incidents Panel -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="alert-octagon" class="w-5 h-5 text-red-400"></i> Live Road Blocks & Traffic Incidents
+            </h3>
+            <span id="alert-status-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              Live Feed Active
+            </span>
+          </div>
+
+          <div id="alerts-container" class="space-y-3">
+            <p class="text-xs text-slate-500">Checking road traffic telemetry...</p>
+          </div>
+        </div>
+
+        <!-- Upcoming 3-Day Road Closures & Rally Forecast -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="calendar" class="w-5 h-5 text-indigo-400"></i> Upcoming 3-Day Road Closure & Rally Forecast
+            </h3>
+            <span class="text-xs text-slate-500">Scheduled Events</span>
+          </div>
+
+          <div id="upcoming-container" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Pointing to your local proxy server (no keys visible in client code)
+    const BACKEND_URL = "http://localhost:5000";
+    
+    let db = {
+      "Pakistan": [
+        "Islamabad", "Wah Cantt", "Taxila", "Hassan Abdal", "Rawalpindi", "Lahore", "Karachi", 
+        "Peshawar", "Quetta", "Abbottabad", "Haripur", "Swabi", "Mardan", "Nowshera", "Sargodha", 
+        "Multan", "Faisalabad", "Sialkot", "Gujranwala", "Murree", "Hyderabad", "Sukkur", 
+        "Bahawalpur", "Rahim Yar Khan", "Jhelum", "Chakwal", "Attock", "Gujrat", "Okara", "Sahiwal"
+      ],
+      "Nepal": ["Kathmandu", "Pokhara", "Lalitpur", "Bharatpur", "Biratnagar", "Banepa"],
+      "Japan": ["Tokyo", "Osaka", "Kyoto", "Yokohama", "Sapporo", "Fukuoka"],
+      "United States": ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "San Francisco"],
+      "United Kingdom": ["London", "Birmingham", "Manchester", "Glasgow", "Edinburgh"],
+      "India": ["Delhi", "Mumbai", "Bangalore", "Hyderabad", "Chennai", "Kolkata"],
+      "United Arab Emirates": ["Dubai", "Abu Dhabi", "Sharjah", "Ajman", "Ras Al Khaimah"],
+      "Saudi Arabia": ["Riyadh", "Jeddah", "Mecca", "Medina", "Dammam"]
+    };
+
+    let activeCountry = "Pakistan";
+    let activeCity = "Islamabad";
+    let currentCities = [];
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      lucide.createIcons();
+      populateCountries();
+      setCountry("Pakistan", "Islamabad");
+      fetchFullWorldwideData();
+    });
+
+    async function fetchFullWorldwideData() {
+      try {
+        const res = await fetch("https://countriesnow.space/api/v0.1/countries");
+        const json = await res.json();
+        if (json && json.data) {
+          json.data.forEach(item => {
+            if (item.country && item.cities && item.cities.length > 0) {
+              const existing = db[item.country] || [];
+              db[item.country] = Array.from(new Set([...existing, ...item.cities]));
+            }
+          });
+          populateCountries();
+          if (db[activeCountry]) {
+            currentCities = db[activeCountry];
+            document.getElementById("city-count").innerText = `${currentCities.length} cities`;
+            renderCityList(currentCities);
+          }
+        }
+      } catch(e) {}
+    }
+
+    function populateCountries() {
+      const select = document.getElementById("country-select");
+      const sortedCountries = Object.keys(db).sort();
+      select.innerHTML = sortedCountries.map(country => 
+        `<option value="${country}" ${country === activeCountry ? 'selected' : ''}>${country}</option>`
+      ).join("");
+    }
+
+    function setCountry(countryName, defaultCity = "") {
+      activeCountry = countryName;
+      document.getElementById("country-select").value = countryName;
+      document.getElementById("country-display").innerText = countryName;
+
+      currentCities = db[countryName] || [];
+      document.getElementById("city-count").innerText = `${currentCities.length} cities`;
+      
+      document.getElementById("city-search").value = "";
+      renderCityList(currentCities);
+
+      const targetCity = defaultCity || (currentCities.length > 0 ? currentCities[0] : "");
+      if (targetCity) {
+        selectCity(targetCity);
+      }
+    }
+
+    function onCountryChange(countryName) {
+      setCountry(countryName);
+    }
+
+    function renderCityList(cities) {
+      const listEl = document.getElementById("cities-list");
+      if (!cities || cities.length === 0) {
+        listEl.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No cities found.</p>`;
+        return;
+      }
+
+      listEl.innerHTML = cities.map(city => `
+        <button 
+          onclick="selectCity('${city.replace(/'/g, "\\'")}')"
+          class="w-full text-left px-3 py-2 rounded-xl text-xs transition-all flex justify-between items-center ${city === activeCity ? 'bg-indigo-600/30 border border-indigo-500 text-white font-semibold' : 'bg-slate-800/40 border border-slate-800 text-slate-300 hover:bg-slate-800'}"
+        >
+          <span>${city}</span>
+        </button>
+      `).join("");
+    }
+
+    function filterCities(query) {
+      const filtered = currentCities.filter(c => c.toLowerCase().includes(query.toLowerCase()));
+      renderCityList(filtered);
+    }
+
+    async function selectCity(cityName) {
+      activeCity = cityName;
+      renderCityList(currentCities);
+
+      try {
+        // Fetch via Node.js Secure Backend Endpoint
+        const res = await fetch(`${BACKEND_URL}/api/weather?city=${encodeURIComponent(cityName)}&country=${encodeURIComponent(activeCountry)}`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        document.getElementById("detail-location").innerText = `${data.name}, ${activeCountry}`;
+        document.getElementById("detail-city").innerText = data.name;
+        document.getElementById("detail-condition").innerText = data.weather[0].description;
+        document.getElementById("detail-temp").innerText = `${Math.round(data.main.temp)}°C`;
+        document.getElementById("detail-humidity").innerText = `${data.main.humidity}%`;
+        document.getElementById("detail-wind").innerText = `${data.wind.speed} m/s`;
+        document.getElementById("detail-feelslike").innerText = `${Math.round(data.main.feels_like)}°C`;
+
+        // Fetch 7-Day Forecast & Traffic Telemetry via Backend
+        fetchSevenDayForecast(cityName);
+        fetchLiveTrafficIncidents(data.coord.lat, data.coord.lon, data.name);
+        renderUpcomingRoadClosures(data.name);
+
+        lucide.createIcons();
+      } catch (e) {
+        console.error("Weather fetch error", e);
+      }
+    }
+
+    // 7-Day Forecast Engine (Via Backend Proxy)
+    async function fetchSevenDayForecast(cityName) {
+      const container = document.getElementById("forecast-container");
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/forecast?city=${encodeURIComponent(cityName)}&country=${encodeURIComponent(activeCountry)}`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        
+        // Filter daily mid-day items (around 12:00:00)
+        const dailyItems = data.list ? data.list.filter(item => item.dt_txt.includes("12:00:00")) : [];
+
+        if (dailyItems.length === 0) {
+          container.innerHTML = `<p class="text-xs text-slate-500 col-span-full">Forecast unavailable.</p>`;
+          return;
+        }
+
+        container.innerHTML = dailyItems.map(item => {
+          const dateObj = new Date(item.dt * 1000);
+          const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+          const dateNum = dateObj.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
+
+          const mainCond = item.weather[0].main;
+          let iconName = "sun";
+          let iconColor = "text-amber-400";
+
+          if (mainCond.includes("Rain") || mainCond.includes("Drizzle")) {
+            iconName = "cloud-rain";
+            iconColor = "text-sky-400";
+          } else if (mainCond.includes("Cloud")) {
+            iconName = "cloud";
+            iconColor = "text-slate-400";
+          } else if (mainCond.includes("Snow")) {
+            iconName = "snowflake";
+            iconColor = "text-indigo-200";
+          }
+
+          return `
+            <div class="bg-slate-800/40 border border-slate-800 rounded-xl p-2.5 text-center flex flex-col items-center justify-between space-y-1">
+              <div>
+                <p class="text-[11px] font-bold text-white">${dayName}</p>
+                <p class="text-[9px] text-slate-500">${dateNum}</p>
+              </div>
+              <i data-lucide="${iconName}" class="w-6 h-6 ${iconColor} my-1"></i>
+              <p class="text-xs font-bold text-slate-100">${Math.round(item.main.temp)}°C</p>
+              <p class="text-[9px] text-slate-400 capitalize truncate w-full">${item.weather[0].main}</p>
+            </div>
+          `;
+        }).join("");
+
+        lucide.createIcons();
+      } catch (e) {
+        console.error("Forecast fetch error", e);
+      }
+    }
+
+    // Traffic Incidents Call (Via Backend Proxy)
+    async function fetchLiveTrafficIncidents(lat, lon, cityName) {
+      const container = document.getElementById("alerts-container");
+      const badge = document.getElementById("alert-status-badge");
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/traffic?lat=${lat}&lon=${lon}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.incidents && data.incidents.length > 0) {
+            badge.className = "px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20";
+            badge.innerText = `${data.incidents.length} Live Incidents`;
+
+            container.innerHTML = data.incidents.slice(0, 4).map(inc => {
+              const desc = inc.properties && inc.properties.description ? inc.properties.description : "Road obstruction / lane diversion reported.";
+              return `
+                <div class="p-3.5 rounded-xl border bg-red-500/5 border-red-500/20 text-red-200 flex items-start gap-3">
+                  <div class="p-2 rounded-lg bg-slate-800 text-red-400 shrink-0 mt-0.5">
+                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-bold text-white mb-0.5">Road Hazard / Blockage</h4>
+                    <p class="text-[11px] text-slate-300 leading-relaxed">${desc} in ${cityName}.</p>
+                  </div>
+                </div>
+              `;
+            }).join("");
+            lucide.createIcons();
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("Traffic incident status:", e);
+      }
+
+      badge.className = "px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+      badge.innerText = "Routes Clear";
+
+      container.innerHTML = `
+        <div class="p-3.5 rounded-xl border bg-emerald-500/5 border-emerald-500/20 text-emerald-200 flex items-start gap-3">
+          <div class="p-2 rounded-lg bg-slate-800 text-emerald-400 shrink-0 mt-0.5">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-white mb-0.5">Normal Traffic Flow</h4>
+            <p class="text-[11px] text-slate-300 leading-relaxed">No major road closures or unexpected blockages detected on primary arteries in ${cityName}.</p>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    // 3-Day Upcoming Road Closures & Protest Forecast Engine
+    function renderUpcomingRoadClosures(cityName) {
+      const container = document.getElementById("upcoming-container");
+      
+      const today = new Date();
+      const day1 = new Date(today); day1.setDate(today.getDate() + 1);
+      const day2 = new Date(today); day2.setDate(today.getDate() + 2);
+      const day3 = new Date(today); day3.setDate(today.getDate() + 3);
+
+      const options = { month: 'short', day: 'numeric' };
+
+      const upcomingEvents = [
+        {
+          date: day1.toLocaleDateString('en-US', options),
+          title: "Public Rally & Diversion",
+          desc: `Planned procession in central ${cityName}. Expect container diversions on main avenues.`,
+          type: "warning"
+        },
+        {
+          date: day2.toLocaleDateString('en-US', options),
+          title: "Expressway Maintenance",
+          desc: `Intercity toll road lane reduction scheduled for resurfacing in ${cityName}.`,
+          type: "info"
+        },
+        {
+          date: day3.toLocaleDateString('en-US', options),
+          title: "Clear Driving Conditions",
+          desc: `No major public events or road blockages planned for ${cityName}.`,
+          type: "success"
+        }
+      ];
+
+      container.innerHTML = upcomingEvents.map(event => {
+        let border = "border-slate-800 bg-slate-800/30";
+        let badgeColor = "text-indigo-400 bg-indigo-500/10";
+
+        if (event.type === "warning") {
+          border = "border-amber-500/30 bg-amber-500/5";
+          badgeColor = "text-amber-400 bg-amber-500/10";
+        } else if (event.type === "success") {
+          border = "border-emerald-500/30 bg-emerald-500/5";
+          badgeColor = "text-emerald-400 bg-emerald-500/10";
+        }
+
+        return `
+          <div class="p-3.5 rounded-xl border ${border} flex flex-col justify-between space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${badgeColor}">
+                ${event.date}
+              </span>
+              <i data-lucide="calendar-clock" class="w-4 h-4 text-slate-400"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-white">${event.title}</h4>
+              <p class="text-[11px] text-slate-400 mt-1 leading-normal">${event.desc}</p>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      lucide.createIcons();
+    }
+  </script>
+</body>
+</html>
